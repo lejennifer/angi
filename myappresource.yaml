@@ -1,0 +1,14 @@
+apiVersion: podinfo.interview.assignment/v1alpha1
+kind: MyAppResource
+metadata:
+  name: my-app
+spec:
+  replicaCount: 2
+  image:
+    repository: stefanprodan/podinfo
+    tag: latest
+  ui:
+    color: "#34577c"
+    message: "Welcome to Podinfo!"
+  redis:
+    enabled: true
