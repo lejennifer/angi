@@ -32,8 +32,8 @@ def test_update_podinfo_deployment():
     }
     update_podinfo_deployment(new_spec, namespace)
     deployment = apps_v1.read_namespaced_deployment('podinfo', namespace)
-    # assert deployment.spec.replicas == new_spec['replicaCount']
-    # assert deployment.spec.template.spec.containers[0].image == f"{new_spec['image']['repository']}:{new_spec['image']['tag']}"
+    assert deployment.spec.replicas == new_spec['replicaCount']
+    assert deployment.spec.template.spec.containers[0].image == f"{new_spec['image']['repository']}:{new_spec['image']['tag']}"
 
 def test_delete_podinfo_deployment():
     namespace = 'default'
