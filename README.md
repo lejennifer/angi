@@ -48,7 +48,9 @@ View on browser
 `localhost:8080`
 
 Run tests
+
 `pytest unit_tests.py`
 
 Stop Minikube
+
 `minikube stop`
