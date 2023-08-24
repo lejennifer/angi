@@ -16,8 +16,10 @@ Install requirements.txt
 
 Testing with Minikube
 
-`minikube start`
-`eval $(minikube docker-env)`
+```
+minikube start
+eval $(minikube docker-env)
+```
 
 Apply CRD
 
