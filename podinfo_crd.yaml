@@ -43,6 +43,17 @@ spec:
                   properties:
                     enabled:
                       type: boolean
+                    server:
+                      type: string
+                env:  
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: string
   scope: Namespaced
   names:
     plural: myappresources
