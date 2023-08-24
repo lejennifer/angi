@@ -1,6 +1,6 @@
 # angi
 
-Assumes user is running macOS, has Minikube and python3 installed
+Assumes user is running macOS, has Minikube and python3 installed, has Docker running
 
 Create a virtual environment
 
