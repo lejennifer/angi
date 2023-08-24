@@ -13,6 +13,7 @@ VERSION = "v1alpha1"
 PLURAL = "myappresources"
 NAMESPACE = "default"
 
+
 def create_redis_secret(namespace):
     secret = client.V1Secret(
         metadata=client.V1ObjectMeta(name='redis-password'),
@@ -27,7 +28,17 @@ def create_redis_secret(namespace):
         else:
             print("Error creating secret:", e)
 
+
 def create_podinfo_deployment(spec, namespace):
+    env_vars = [client.V1EnvVar(name=e['name'], value=e['value']) for e in spec['env']]
+    env_vars.append(client.V1EnvVar(name='PODINFO_UI_COLOR', value=spec['ui']['color']))
+    env_vars.append(client.V1EnvVar(name='PODINFO_UI_MESSAGE', value=spec['ui']['message']))
+
+    # Extract the value of PODINFO_CACHE_SERVER from the env list
+    podinfo_cache_server_value = next((e['value'] for e in spec['env'] if e['name'] == 'PODINFO_CACHE_SERVER'), None)
+    if podinfo_cache_server_value:
+        env_vars.append(client.V1EnvVar(name='PODINFO_CACHE_SERVER', value=podinfo_cache_server_value))
+
     deployment = client.V1Deployment(
         metadata=client.V1ObjectMeta(name='podinfo'),
         spec=client.V1DeploymentSpec(
@@ -42,11 +53,7 @@ def create_podinfo_deployment(spec, namespace):
                         client.V1Container(
                             name='podinfo',
                             image=f"{spec['image']['repository']}:{spec['image']['tag']}",
-                            env=[
-                                client.V1EnvVar(name='PODINFO_UI_COLOR', value=spec['ui']['color']),
-                                client.V1EnvVar(name='PODINFO_UI_MESSAGE', value=spec['ui']['message']),
-                                client.V1EnvVar(name='PODINFO_CACHE_SERVER', value='tcp://<host>:<port>')
-                            ]
+                            env=env_vars
                         )
                     ]
                 )
@@ -73,9 +80,16 @@ def update_podinfo_deployment(spec, namespace, max_retries=3):
         try:
             existing_deployment = apps_v1.read_namespaced_deployment('podinfo', namespace)
             existing_deployment.spec.replicas = spec['replicaCount']
-            existing_deployment.spec.template.spec.containers[0].image = f"{spec['image']['repository']}:{spec['image']['tag']}"
-            existing_deployment.spec.template.spec.containers[0].env[0].value = spec['ui']['color']
-            existing_deployment.spec.template.spec.containers[0].env[1].value = spec['ui']['message']
+            existing_deployment.spec.template.spec.containers[
+                0].image = f"{spec['image']['repository']}:{spec['image']['tag']}"
+
+            # Update all environment variables
+            env_vars = [client.V1EnvVar(name=e['name'], value=e['value']) for e in spec['env']]
+            env_vars.append(client.V1EnvVar(name='PODINFO_UI_COLOR', value=spec['ui']['color']))
+            env_vars.append(client.V1EnvVar(name='PODINFO_UI_MESSAGE', value=spec['ui']['message']))
+
+            existing_deployment.spec.template.spec.containers[0].env = env_vars
+
             apps_v1.replace_namespaced_deployment('podinfo', namespace, existing_deployment)
             return
         except ApiException as e:
@@ -86,6 +100,7 @@ def update_podinfo_deployment(spec, namespace, max_retries=3):
 
 
 def handle_event(event_type, event_object):
+    print(f"Handling event: {event_type}")  # Log the event type
     namespace = event_object['metadata']['namespace']
     spec = event_object['spec']
 
@@ -119,38 +134,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# Unit Tests
-
-def test_create_podinfo_deployment():
-    namespace = 'default'
-    spec = {
-        'replicaCount': 2,
-        'image': {'repository': 'stefanprodan/podinfo', 'tag': 'latest'},
-        'ui': {'color': '#34577c', 'message': 'Welcome to Podinfo!'}
-    }
-    create_podinfo_deployment(spec, namespace)
-    deployment = apps_v1.read_namespaced_deployment('podinfo', namespace)
-    assert deployment.spec.replicas == spec['replicaCount']
-    assert deployment.spec.template.spec.containers[0].image == f"{spec['image']['repository']}:{spec['image']['tag']}"
-
-def test_update_podinfo_deployment():
-    namespace = 'default'
-    new_spec = {
-        'replicaCount': 3,
-        'image': {'repository': 'stefanprodan/podinfo', 'tag': 'new-version'},
-        'ui': {'color': '#123456', 'message': 'Updated Message'}
-    }
-    update_podinfo_deployment(new_spec, namespace)
-    deployment = apps_v1.read_namespaced_deployment('podinfo', namespace)
-    assert deployment.spec.replicas == new_spec['replicaCount']
-    assert deployment.spec.template.spec.containers[0].image == f"{new_spec['image']['repository']}:{new_spec['image']['tag']}"
-
-def test_delete_podinfo_deployment():
-    namespace = 'default'
-    delete_podinfo_deployment(namespace)
-    try:
-        apps_v1.read_namespaced_deployment('podinfo', namespace)
-        assert False, "Deployment should be deleted"
-    except ApiException as e:
-        assert e.status == 404

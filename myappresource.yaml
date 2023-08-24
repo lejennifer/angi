@@ -1,14 +1,21 @@
 apiVersion: podinfo.interview.assignment/v1alpha1
 kind: MyAppResource
 metadata:
-  name: my-app
+  name: example-myappresource
 spec:
   replicaCount: 2
+  resources:
+    memoryLimit: 64Mi
+    cpuRequest: 100m
   image:
-    repository: stefanprodan/podinfo
+    repository: ghcr.io/stefanprodan/podinfo
     tag: latest
   ui:
     color: "#34577c"
-    message: "Welcome to Podinfo!"
+    message: "Hi!"
   redis:
     enabled: true
+    server:
+  env:
+    - name: PODINFO_CACHE_SERVER
+      value: tcp://redis:6379
